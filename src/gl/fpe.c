@@ -13,7 +13,7 @@
 #include "fpe_cache.h"
 #include "fpe.h"
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #pragma GCC optimize 0
 #define DBG(a) a
@@ -692,8 +692,23 @@ void fpe_glSecondaryColorPointer(GLint size, GLenum type, GLsizei stride, const 
 
 void fpe_glVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer) {
     DBG(printf("fpe_glVertexPointer(%d, %s, %d, %p)\n", size, PrintEnum(type), stride, pointer);)
-    if(pointer==glstate->vao->vertexattrib[ATT_VERTEX].pointer)
+
+
+    // for(int i=0;i<stride*3;i+=stride){
+    //     GLfloat * start = (GLfloat *)(pointer + i);
+
+    //     for(int p=0;p<size;p++){
+    //         LOGD("%f ", start[p]);
+    //     }
+    //     LOGD("\n");
+    // }
+
+    if (pointer == glstate->vao->vertexattrib[ATT_VERTEX].pointer)
+    {
+        LOGD("Already set.\n");
         return;
+    }
+
     glstate->vao->vertexattrib[ATT_VERTEX].size = size;
     glstate->vao->vertexattrib[ATT_VERTEX].type = type;
     glstate->vao->vertexattrib[ATT_VERTEX].stride = stride;
@@ -702,6 +717,8 @@ void fpe_glVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *
     glstate->vao->vertexattrib[ATT_VERTEX].normalized = GL_FALSE;
     glstate->vao->vertexattrib[ATT_VERTEX].real_buffer = 0;
     glstate->vao->vertexattrib[ATT_VERTEX].real_pointer = 0;
+
+    LOGD("Values changed.\n");
 }
 
 void fpe_glColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid *pointer) {
@@ -784,6 +801,8 @@ void fpe_glDrawArrays(GLenum mode, GLint first, GLsizei count) {
     scratch_t scratch = {0};
     realize_glenv(mode==GL_POINTS, first, count, 0, NULL, &scratch);
     LOAD_GLES(glDrawArrays);
+
+    DBG(printf("gles_glDrawArrays(%s, %d, %d), program=%d, instanceID=%u\n", PrintEnum(mode), first, count, glstate->glsl->program, glstate->instanceID);)
     gles_glDrawArrays(mode, first, count);
     free_scratch(&scratch);
 }
@@ -1052,8 +1071,23 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
         }
         glstate->fpe_bound_changed = 0;
     }
+    LOAD_GLES(glGetError);
+
+    // printf("CHECK glstate->gleshard->program: %d\n", (int)glstate->gleshard->program);
+
+    GLint realProg = 0;
+    gl4es_glGetIntegerv(GL_CURRENT_PROGRAM, &realProg);
+
+    // printf("CHECK realProg: %d\n", (int)realProg);
+
+    if(realProg != glstate->gleshard->program){
+        glstate->gleshard->program = realProg;
+    }
+
     // activate program if needed
     if(glstate->glsl->program) {
+        printf("glstate->glsl->program: %d\n", (int)glstate->glsl->program);
+
         // but first, check if some fixedpipeline state (like GL_ALPHA_TEST) need to alter the original program
         fpe_state_t state;
         fpe_ReleventState(&state, glstate->fpe_state, 0);
@@ -1081,6 +1115,13 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
             glstate->gleshard->program = program;
             glstate->gleshard->glprogram = glprogram;
             gles_glUseProgram(glstate->gleshard->program);
+
+            GLenum err = gles_glGetError();
+            // if (err != GL_NO_ERROR)
+            {
+                printf("LIBGL: glGetError(): %s\n", PrintEnum(err));
+            }
+
             DBG(printf("Use GLSL program %d\n", glstate->gleshard->program);)
         }
         // synchronize uniforms with parent!
@@ -1093,6 +1134,13 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
             glstate->gleshard->program = glstate->fpe->prog;
             glstate->gleshard->glprogram = glstate->fpe->glprogram;
             gles_glUseProgram(glstate->gleshard->program);
+
+            GLenum err = gles_glGetError();
+            // if (err != GL_NO_ERROR)
+            {
+                printf("LIBGL: glGetError(): %s\n", PrintEnum(err));
+            }
+
             DBG(printf("Use FPE program %d\n", glstate->gleshard->program);)
         }
     }
@@ -1404,7 +1452,38 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
     {
         vertexattrib_t *v = &glstate->gleshard->vertexattrib[i];
         vertexattrib_t *w = &glstate->vao->vertexattrib[i];
-        int dirty = 0;
+
+        // LOGD("CHECK attrib %d v (gles) %d w (fpe) %d\n", i, (int)v->enabled, (int)w->enabled);
+
+        GLint realEn = 0;
+        glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &realEn);
+
+        void* realPtr = 0;
+        glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &realPtr);
+
+        if(v->enabled != realEn){
+            LOGD("CHECK %d ENABLE DIFFER real %d our %d\n", i, (int)realEn, v->enabled);
+            // v->enabled = realEn;
+
+            // v->enabled = false;
+        }
+
+        if(v->pointer != realPtr){
+            LOGD("CHECK %d POINTERS DIFFER real %p our %p\n", i, realPtr, v->pointer);
+            //v->pointer = realPtr;
+
+            // v->pointer = 0;
+        }
+
+        // LOGD("CHECK %d realPtr %p\n", i, realPtr);
+
+        // v->pointer
+
+        // LOGD("CHECK %d realEn %d\n", i, (int)realEn);
+        //v->enabled = realEn;
+        v->enabled = false;
+
+        int dirty = 0; // MOD
         // enable / disable Array if needed
         if(v->enabled != w->enabled || (v->enabled && w->divisor)) {
             dirty = 1;
@@ -1466,6 +1545,18 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
                     gles_glBindBuffer(GL_ARRAY_BUFFER, v->real_buffer);
                     old_buffer = v->real_buffer;
                 }
+
+                // for (int i = 0; i < v->stride * 3; i += v->stride)
+                // {
+                //     GLfloat *start = (GLfloat *)(v->pointer + i);
+
+                //     for (int p = 0; p < v->size; p++)
+                //     {
+                //         LOGD("%f ", start[p]);
+                //     }
+                //     LOGD("\n");
+                // }
+
                 gles_glVertexAttribPointer(i, v->size, v->type, v->normalized, v->stride, v->pointer);
                 DBG(printf("glVertexAttribPointer(%d, %d, %s, %d, %d, %p)\n", i, v->size, PrintEnum(v->type), v->normalized, v->stride, (GLvoid*)((uintptr_t)v->pointer+((v->buffer)?(uintptr_t)v->buffer->data:0)));)
             }

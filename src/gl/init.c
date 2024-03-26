@@ -404,6 +404,11 @@ void initialize_gl4es() {
         globals4es.nointovlhack = 1;
         SHUT_LOGD("No hack in shader converter to define overloaded function with int\n");
     }
+
+    if(hardext.glsl300es || hardext.glsl310es) {
+        globals4es.nointovlhack = 1;
+    }
+
     if(IsEnvVarTrue("LIBGL_NOSHADERLOD")) {
         globals4es.noshaderlod = 1;
         SHUT_LOGD("No GL_EXT_shader_texture_lod used even if present\n");
@@ -495,7 +500,9 @@ void initialize_gl4es() {
 
     if(hardext.esversion==1) globals4es.usevbo=0;   // VBO on ES1.1 backend will be too messy, so disabling
     else {
-	    globals4es.usevbo = ReturnEnvVarIntDef("LIBGL_USEVBO",1);
+	    // globals4es.usevbo = ReturnEnvVarIntDef("LIBGL_USEVBO",1);
+      globals4es.usevbo=0;
+
 	    switch(globals4es.usevbo) {
 	      case 0:
 	        SHUT_LOGD("Use of VBO disabled\n");
@@ -614,6 +621,8 @@ void initialize_gl4es() {
     if(globals4es.vgpu_precision != 0){
         SHUT_LOGD("VGPU default precision overridden ! (%i)", globals4es.vgpu_precision);
     }
+
+    globals4es.vgpu_dump = 1;
 
 
     env(LIBGL_NOCLEAN, globals4es.noclean, "Don't clean Context when destroy");

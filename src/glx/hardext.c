@@ -272,6 +272,10 @@ void GetHardwareExtensions(int notest)
     LOAD_GLES(glGetError);
     // Now get extensions
     const char* Exts = gles_glGetString(GL_EXTENSIONS);
+
+    LOGD("hardext.esversion: %d", hardext.esversion);
+    LOGD("Extensions: %s", Exts);
+
     // Parse them!
     #define S(A, B, C) if(strstr(Exts, A)) { hardext.B = 1; SHUT_LOGD("Extension %s detected%s",A, C?" and used\n":"\n"); } 
     if(hardext.esversion>1) hardext.npot = 1;
@@ -434,10 +438,12 @@ void GetHardwareExtensions(int notest)
     if(hardext.glsl300es) {
         SHUT_LOGD("GLSL 300 es supported%s\n", (hardext.glsl120||hardext.glsl310es)?"":" and used");
 	    hardext.drawbuffers = 1;
+        hardext.derivatives = 1;
     }
     if(hardext.glsl310es) {
         SHUT_LOGD("GLSL 310 es supported%s\n", hardext.glsl120?"":" and used");
 	    hardext.drawbuffers = 1;
+        hardext.derivatives = 1;
     }
     // VGPU SPECIFIC
     if(hardext.glsl320es) {

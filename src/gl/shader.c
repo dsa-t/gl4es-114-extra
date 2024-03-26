@@ -174,15 +174,56 @@ void gl4es_glShaderSource(GLuint shader, GLsizei count, const GLchar * const *st
     LOAD_GLES2(glShaderSource);
     if (gles_glShaderSource) {
         // adapt shader if needed (i.e. not an es2 context and shader is not #version 100)
-        //SHUT_LOGD("Source shader: \n%s", glshader->source);
+        // LOGD("Source shader: \n%s", glshader->source);
+
+        LOGD("Source shader: \n");
+
+        {
+            char *curLine = glshader->source;
+            while (curLine)
+            {
+                char *nextLine = strchr(curLine, '\n');
+                if (nextLine)
+                    *nextLine = '\0'; // temporarily terminate the current line
+
+                LOGD("%s\n", curLine);
+
+                if (nextLine)
+                    *nextLine = '\n'; // then restore newline-char, just to be tidy
+                curLine = nextLine ? (nextLine + 1) : NULL;
+            }
+        }
+
         if(glstate->glsl->es2 && !strncmp(glshader->source, "#version 100", 12))
             glshader->converted = strdup(glshader->source);
         else{
             glshader->converted = ConvertShaderConditionally(glshader);
         }
 
+        LOGD("glstate->glsl->es2: %d \n", (int)glstate->glsl->es2);
+
+        const GLchar * const* targetShader = (const GLchar * const*)((glshader->converted)?(&glshader->converted):(&glshader->source));
+        //LOGD("Target shader: \n%s", *targetShader);
+        LOGD("Target shader: \n");
+
+        {
+            char *curLine = *targetShader;
+            while (curLine)
+            {
+                char *nextLine = strchr(curLine, '\n');
+                if (nextLine)
+                    *nextLine = '\0'; // temporarily terminate the current line
+
+                LOGD("%s\n", curLine);
+
+                if (nextLine)
+                    *nextLine = '\n'; // then restore newline-char, just to be tidy
+                curLine = nextLine ? (nextLine + 1) : NULL;
+            }
+        }
+
         // send source to GLES2 hardware if any
-        gles_glShaderSource(shader, 1, (const GLchar * const*)((glshader->converted)?(&glshader->converted):(&glshader->source)), NULL);
+        gles_glShaderSource(shader, 1, targetShader, NULL);
         errorGL();
     } else
         noerrorShim();
