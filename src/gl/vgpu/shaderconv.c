@@ -210,7 +210,7 @@ char* FindAndCorrect(char* source, int* length, int mode) {
          rewind = 1;
       }
       if(mode == MODE_CASE) {
-         if(!isdigit(template_string[0])) { // cant have a number without the first digit, and the standard doesnt permit variable names starting with numbers
+         if(!isDigit(template_string[0])) { // cant have a number without the first digit, and the standard doesnt permit variable names starting with numbers
             char   decltemplate_formatted[VARIABLE_SIZE];
             float  declared_value = 99;
             snprintf(decltemplate_formatted, VARIABLE_SIZE, declaration_template, template_string, "%f");
