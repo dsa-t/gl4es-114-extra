@@ -1456,10 +1456,10 @@ void realize_glenv(int ispoint, int first, int count, GLenum type, const void* i
         // LOGD("CHECK attrib %d v (gles) %d w (fpe) %d\n", i, (int)v->enabled, (int)w->enabled);
 
         GLint realEn = 0;
-        glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &realEn);
+        gl4es_glGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &realEn);
 
         void* realPtr = 0;
-        glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &realPtr);
+        gl4es_glGetVertexAttribPointerv(i, GL_VERTEX_ATTRIB_ARRAY_POINTER, &realPtr);
 
         if(v->enabled != realEn){
             LOGD("CHECK %d ENABLE DIFFER real %d our %d\n", i, (int)realEn, v->enabled);
